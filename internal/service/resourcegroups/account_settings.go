@@ -52,8 +52,11 @@ func accountSettings() *schema.Resource {
 func accountSettingsCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn := meta.(*conns.AWSClient).ResourceGroupsClient(ctx)
 
+	//May want to specify a resource, and set it INACTIVE for some reason. Even though it's INACTIVE by default.
+	desiredStatus := d.Get("GroupLifecycleEventsDesiredStatus").(types.GroupLifecycleEventsDesiredStatus)
+
 	input := &resourcegroups.UpdateAccountSettingsInput{
-		GroupLifecycleEventsDesiredStatus: d.Get("GroupLifecycleEventsDesiredStatus").(types.GroupLifecycleEventsDesiredStatus),
+		GroupLifecycleEventsDesiredStatus: desiredStatus,
 	}
 
 	settings, err := conn.UpdateAccountSettings(ctx, input)
@@ -62,7 +65,7 @@ func accountSettingsCreate(ctx context.Context, d *schema.ResourceData, meta int
 		return diag.Errorf("creating ResourceGroups Account Settings (%s)", err)
 	}
 
-	waitError := accountSettingsWaitForState(ctx, conn, types.GroupLifecycleEventsStatusActive)
+	waitError := accountSettingsWaitForState(ctx, conn, desiredStatus)
 
 	if waitError != nil {
 		return diag.Errorf("creating ResourceGroups Account Settings: wait error: %s", err)
@@ -88,11 +91,6 @@ func accountSettingsRead(ctx context.Context, d *schema.ResourceData, meta inter
 		return diag.Errorf("reading ResourceGroups Account Settings: %s", err)
 	}
 
-	if !d.IsNewResource() {
-		d.SetId("")
-		return nil
-	}
-
 	d.Set("GroupLifecycleEventsDesiredStatus", settings.AccountSettings.GroupLifecycleEventsDesiredStatus)
 	d.Set("GroupLifecycleEventsStatus", settings.AccountSettings.GroupLifecycleEventsStatus)
 	d.Set("GroupLifecycleEventsStatusMessage", settings.AccountSettings.GroupLifecycleEventsStatusMessage)
@@ -113,7 +111,7 @@ func accountSettingsDelete(ctx context.Context, d *schema.ResourceData, meta int
 		return diag.Errorf("reading ResourceGroups Account Settings (%s)", err)
 	}
 
-	waitError := accountSettingsWaitForState(ctx, conn, types.GroupLifecycleEventsStatusInactive)
+	waitError := accountSettingsWaitForState(ctx, conn, types.GroupLifecycleEventsDesiredStatusInactive)
 
 	if waitError != nil {
 		return diag.Errorf("creating ResourceGroups Account Settings: wait error: %s", err)
@@ -124,7 +122,7 @@ func accountSettingsDelete(ctx context.Context, d *schema.ResourceData, meta int
 	return nil
 }
 
-func accountSettingsWaitForState(ctx context.Context, conn *resourcegroups.Client, desiredState types.GroupLifecycleEventsStatus) error {
+func accountSettingsWaitForState(ctx context.Context, conn *resourcegroups.Client, desiredState types.GroupLifecycleEventsDesiredStatus) error {
 
 	stateConf := &retry.StateChangeConf{
 		Pending: []string{string(types.GroupLifecycleEventsStatusInProgress)},
