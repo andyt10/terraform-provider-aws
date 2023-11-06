@@ -29,6 +29,11 @@ func (p *servicePackage) SDKDataSources(ctx context.Context) []*types.ServicePac
 func (p *servicePackage) SDKResources(ctx context.Context) []*types.ServicePackageSDKResource {
 	return []*types.ServicePackageSDKResource{
 		{
+			Factory:  accountSettings,
+			TypeName: "aws_resourcegroups_account_settings",
+			Name:     "AccountSettings",
+		},
+		{
 			Factory:  resourceGroup,
 			TypeName: "aws_resourcegroups_group",
 			Name:     "Group",
